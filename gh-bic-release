@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+
+
+willMergePR=0
+prNumber=""
+willPushTag=0
+
+# Function to display script usage
+function display_usage {
+  echo "Usage: gh bic-release [-p <number>] [-t]"
+  echo ""
+  echo "Options:"
+  echo "  -p number Optional. Specify the pr number you want to merge to master. "
+  echo "  -t  		Optional. Push the current package version as tag to origin"
+  echo ""
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  key="$1"
+  case $key in
+    -p)
+			willMergePR=1
+      prNumber="$2"
+      shift
+      shift
+      ;;
+    -t)
+      willPushTag=1
+      shift
+      ;;
+    *)
+      display_usage
+      ;;
+  esac
+done
+
+if [[ "$willMergePR" = 1 ]] && [[ -z "$prNumber" ]]; then
+	echo "Error: PR number is required."
+  display_usage
+fi
+
+function mergePR {
+  echoGreenText "Merge the PR"
+  gh pr merge $prNumber -m --auto  #not allow auto if there is check not passed
+}
+
+function pushTag {
+	git checkout master
+	git pull origin master
+  CURRENT_VERSION=$(npm pkg get version | xargs echo)
+  git tag -fa "v$CURRENT_VERSION" -m "v$CURRENT_VERSION"
+  git push origin "v$CURRENT_VERSION"
+}
+	
+function echoGreenText {
+  echo -e "\033[0;32m$1\033[0m"
+}
+
+if [[ "$willMergePR" = "1" ]]; then
+  mergePR
+fi
+
+if [[ "$willPushTag" = "1" ]]; then
+  pushTag
+fi
+
+echoGreenText "DONE!!!"
